@@ -1,0 +1,26 @@
+#!/bin/bash
+
+
+#SBATCH -A {partition}
+#SBATCH -C {job_type}
+#SBATCH -q regular
+#SBATCH -N {num_nodes}
+#SBATCH -t {time}
+#SBATCH -J {title}
+#SBATCH -o %x-%j.out
+#SBATCH -e %x-%j.err
+
+#SBATCH --mail-user={email}
+#SBATCH --mail-type={mail_type}
+
+module load {modules}
+
+# One can use up to 16 OpenMP threads-per-MPI-rank when using
+#  4 GPUs-per-node.
+export OMP_NUM_THREADS={task_per_node}
+export OMP_PLACES=threads
+export OMP_PROC_BIND=spread
+
+srun -n {num_resources} -c {task_per_node} {gpu_resources} --cpu-bind=cores {gpu_bind} <INSERT PROGRAM TO RUN HERE>
+
+

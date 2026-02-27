@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+'''
+    A simple python script that can generate slurm job files. Run from anywhere.
+'''
+################################################################
+                    ## Imports ##
+import os
+import re
+
+################################################################
+                    ## Default values ##
+
+default_time = "02:00:00"
+job_name = "job.sh"
+partition = "m4269"
+your_email = "bburdick@vt.edu"
+mail_type = "NONE"
+
+# Perlmutter resources
+cpu_per_node = 128
+gpu_per_node = 4
+
+################################################################
+                    ## Paths ##
+
+current_path = os.getcwd()
+
+full_path = os.path.join(current_path, job_name)
+
+template_dir = os.path.join(os.path.expanduser("~"), "bin", "templates")
+
+################################################################
+                    ## User Prompting ##
+
+print("General note: If you need to run something ASAP, it's probably a good idea to run an interactive job using \"salloc\"!\n")
+
+
+job_type = input("Do you need CPUs or GPUs? (cpu/[gpu])\n")
+
+if job_type == "gpu" or job_type == "":
+    job_type = "gpu"
+else:
+    job_type = "cpu"
+
+num_resources = int(input(f"Please specify how many {job_type}s you need:\n"))
+
+if job_type == "gpu" or job_type == "":
+    if num_resources % gpu_per_node == 0:
+        num_nodes = int(num_resources / gpu_per_node)
+    else:
+        print("WARNING: You have asked for a number of resources that is not a multiple of the resources per node. It is ideal to fully utilitze a node when possible. Consider running in the shared queue if you must use this number of resources.\n")
+        num_nodes = num_resources//gpu_per_node + 1 
+else:
+    if num_resources % cpu_per_node == 0:
+        num_nodes = int(num_resources / cpu_per_node)
+    else:
+        print("WARNING: You have asked for a number of resources that is not a multiple of the resources per node. It is ideal to fully utilitze a node when possible. Consider running in the shared queue if you must use this number of resources.\n")
+        num_nodes = num_resources//cpu_per_node + 1
+
+task_per_node = input("Please specify how many tasks per node (e.g. -c) you are using? (Press enter to use the default of 1)\n")
+
+if task_per_node == "1" or task_per_node == "":
+    task_per_node = 1
+else:
+    if job_type == "gpu":
+        num_nodes = 2 * (64//task_per_node)
+    else:
+        num_nodes = 2 * (128//task_per_node)
+
+print(f"You have requested {num_resources} {job_type}s, which requires {num_nodes} nodes.\n")
+
+time = input(f"Please input the runtime in hh:mm:ss format. (Press enter to use the default value of {default_time})\n")
+
+if time == "":
+    time = default_time
+
+vasp_bool = input("Is this a vasp job? ([y]/n)\n")
+
+if vasp_bool == "y" or vasp_bool == "":
+    vasp_bool = True
+else:
+    vasp_bool = False
+
+modules = ""
+
+if vasp_bool == False:
+    modules = input("Please list any modules you'd like to load here: (Press enter to load no modules)\n")
+
+title = input("Please input the title of this job:\n")
+
+mail_bool = input(f"Do you want emails sent to {your_email} for this job? (y/[n])\n")
+
+if mail_bool == "n" or mail_bool == "":
+    mail_bool = False
+else:
+    mail_bool = True
+
+if mail_bool:
+    mail_type = input("What type of email notifications would you like? The options are: [NONE], BEGIN, END, FAIL, REQUEUE, ALL.\n")
+
+if mail_type == "":
+    mail_type = "NONE"
+
+################################################################
+                    ## Read, Edit, and Create File ##
+
+gpu_resources = ""
+gpu_bind = "--gpu-bind=none"
+
+if job_type == "gpu":
+    partition = partition + "_g"
+    gpu_resources = f"-G {num_resources}"
+    if task_per_node == 1:
+        task_per_node = 32
+
+var_dict = {
+    "job_type":job_type, 
+    "task_per_node":task_per_node, 
+    "partition":partition, 
+    "num_nodes":num_nodes, 
+    "time":time, 
+    "job_name":job_name, 
+    "num_resources":num_resources, 
+    "gpu_resources":gpu_resources, 
+    "gpu_bind":gpu_bind, 
+    "email":your_email, 
+    "mail_type":mail_type, 
+    "modules":modules, 
+    "title":title
+}
+
+if vasp_bool:
+    template_path = os.path.join(template_dir, "vasp.txt") 
+else:
+    template_path = os.path.join(template_dir, "generic.txt") 
+
+with open(template_path, "r") as file:
+    template_lines = file.readlines()
+
+output_lines = []
+
+for line in template_lines:
+    if "{" in line and "}" in line:
+        key = [match.group(1) for match in re.finditer(r'\{(.*?)\}', line)][0]
+        output_lines.append(line.format_map(var_dict))
+    else:
+        output_lines.append(line)
+
+if vasp_bool == False and modules == "":
+    output_lines.remove("module load \n")
+
+with open(full_path, "w") as out_file:
+    out_file.writelines(output_lines)
+
+print(f"Job file titled \"{job_name}\" written at {current_path}. It's always a good idea to double check!")
+
+
+
