@@ -1,0 +1,53 @@
+#!/bin/bash
+
+#SBATCH --time={time}
+#SBATCH --job-name={job_name}
+#SBATCH --partition={partition}
+#SBATCH --nodes={num_nodes}
+#SBATCH --gres=gpu:{num_resources}
+#SBATCH --cpus-per-task={cpu_per_task}
+#SBATCH --account={account}
+#SBATCH --ntasks={num_resources}
+#SBATCH --mail-user={your_email}
+#SBATCH --mail-type={mail_type}
+
+echo "------------------"
+
+# remove any previously loaded modules and load vasp for GPUs
+module reset
+module --ignore_cache load VASP/6.4.2-OpenMPI-5.0.3-NVHPC-24.9-CUDA-12.6.0
+
+# output a list of all loaded modules
+echo "Loaded modules:"
+module list
+
+echo "------------------"
+echo
+
+# print the path to vasp
+echo "Path to vasp:"
+which vasp_std
+echo
+
+# log gpu usage
+echo "This job will output a gpu usage file called *.gpu.log"
+nvidia-smi --query-gpu=timestamp,name,pci.bus_id,driver_version,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 3 > $SLURM_JOBID.gpu.log & 
+echo
+
+# begin the run
+echo "Beginning calculation..."
+echo
+mpirun vasp_std
+
+echo "------------------"
+echo "Job finished! Status:"
+
+# output an error message if the job fails
+if [ $? -ne 0 ]; then
+  echo "VASP: Run error!"
+  exit 1
+fi
+# output the following if the job ran correctly
+echo "VASP: Normal end of execution!"
+exit 0
+

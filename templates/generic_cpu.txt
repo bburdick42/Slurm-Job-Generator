@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#SBATCH --time={time}
+#SBATCH --job-name={job_name}
+#SBATCH --partition={partition}
+#SBATCH --account={account}
+#SBATCH --nodes={num_nodes}
+#SBATCH --cpus-per-task={num_resources}
+#SBATCH --ntasks={num_tasks}
+#SBATCH --mail-user={your_email}
+#SBATCH --mail-type={mail_type}
+
+module reset
+
+# Load your home environment
+if [ -z ${HOME+x} ]; then
+  export HOME=$(echo ~)
+  source /etc/profile
+  source /etc/bashrc
+  source $HOME/.bashrc
+fi
+
+# Command to run script goes below here
+
+

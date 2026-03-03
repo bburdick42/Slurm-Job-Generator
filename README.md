@@ -1,1 +1,11 @@
-A python script that generates a job file for SLURM. Reads the files from templates folder, and can be run from anywhere by running the command "genjob".
+# genjob
+
+A utility written in python to create SLURM job submission scripts.
+
+## Usage
+
+Run from anywhere:
+
+'''bash
+genjob
+
