@@ -1,11 +1,8 @@
 # genjob
-
 A utility written in python to create SLURM job submission scripts.
 
 ## Usage
-
-Run from anywhere:
-
-'''bash
+Place the files in your home binary, then run from anywhere:
+```bash
 genjob
 
